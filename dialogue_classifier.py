@@ -11,25 +11,37 @@ import time
 def get_raw_training_data(filename):
     """ """
     training_data = []
-    actor_dict = {}
-    #should open a CSV file and extract its data into a dictionary structure
-    #person --> name of actor who is speaking
-    #sentence --> sentence that person has said
-    #make sure all entries are changed to lowercase before being added into the dictionary
 
+    with open(filename) as csvfile:
+        reader = csv.reader(csvfile, delimiter=',')
+        line = 0
+        for row in reader:
+            actor_dict = {}
+            name = row[0].lower()
+            sentence = row[1].lower()
+            actor_dict["person"] = name
+            actor_dict["sentence"] = sentence
+            print(name + ": " + sentence)
+            
+            training_data.append(actor_dict)
+            
+            line += 1
+            
     return training_data
 
 
 def organize_raw_training_data(raw_training_data, stemmer):
 
     for element in raw_training_data:
+        
+    return 0
 
 
 def preprocess_words(words, stemmer):
     """ Stems each word in the words list and returns a 
     list of these word stems without duplicates."""
 
-    word_stems = ()
+    word_stems = set()
     preprocessed_words = []
 
     for word in words:
@@ -47,22 +59,27 @@ def create_training_data(words, stems, classes, documents, stemmer):
     output = []
 
 
-
     return training_data, output
     
 
 def sigmoid(z):
     """Returns the basic sigmoid formula for z"""
     denominator = 1 + np.exp(-z)
-    formula = 1/denominator
-    return formula
+    output = 1/denominator
+    return output
+
+
+def sigmoid_output_to_derivative(output):
+    """Convert the sigmoid function's output to its derivative."""
+    return output * (1-output)
 
 
 def main():
     stemmer = LancasterStemmer()
 
-    raw_training_data = get_raw_training_data('dialogue_data.csv')
+    #raw_training_data = get_raw_training_data('dialogue_data.csv')
+    raw_training_data = get_raw_training_data('test.csv')
     words, classes, documents = organize_raw_training_data(raw_training_data, stemmer)
 
-if __name__ == ""__main__"":
+if __name__ == "__main__":
     main()  
