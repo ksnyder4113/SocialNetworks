@@ -31,22 +31,38 @@ def get_raw_training_data(filename):
 
 
 def organize_raw_training_data(raw_training_data, stemmer):
+""" """
+    words = []
+    classes = []
+    documents = []
 
     for element in raw_training_data:
+        name = element["person"]
+        sentence = element["sentence"]
+        tokens = nltk.word_tokenize(sentence)
+        words.extend(tokens)
         
-    return 0
+        if name not in classes:
+            classes.append(name)
+        
+        actor_tup = (tokens, name)
+        documents.append(actor_tup)
+
+    preprocessed_words = preprocess_words(words, stemmer)
+
+    return preprocessed_words, classes, documents
 
 
 def preprocess_words(words, stemmer):
     """ Stems each word in the words list and returns a 
     list of these word stems without duplicates."""
-
     word_stems = set()
     preprocessed_words = []
 
     for word in words:
         stemmed_word = stemmer.stem(word)
-        word_stems.add(stemmed_word)
+        if stemmed_word != "?" or "!" or ".":
+            word_stems.add(stemmed_word)
     
     for stem in word_stems:
         preprocessed_words.append(stem)
@@ -54,10 +70,34 @@ def preprocess_words(words, stemmer):
     return preprocessed_words
 
 
-def create_training_data(words, stems, classes, documents, stemmer):
+def create_training_data(words, classes, documents, stemmer):
     training_data = []
     output = []
 
+    for line in documents:
+        name = line[0]
+        sentence = line[1]
+        elements = []
+        bag = []
+        for elem in sentence.split():
+            stem = stemmer.stem(elem)
+            elements.append(stem)
+        
+        for word in words:
+            if word in elements:
+                bag.append(1)
+            else:
+                bag.append(0)
+
+        class_list = []
+        for actor_name in classes:
+            if name == actor_name:
+                class_list.append(1)
+            else:
+                class_list.append(0)
+        
+        training_data.append(bag)
+        output.append(class_list)
 
     return training_data, output
     
@@ -80,6 +120,7 @@ def main():
     #raw_training_data = get_raw_training_data('dialogue_data.csv')
     raw_training_data = get_raw_training_data('test.csv')
     words, classes, documents = organize_raw_training_data(raw_training_data, stemmer)
+    training_data, output = create_training_data(words, classes, documents, stemmer)
 
 if __name__ == "__main__":
     main()  
