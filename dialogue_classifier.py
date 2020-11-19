@@ -6,6 +6,7 @@ import datetime
 import csv
 import numpy as np
 import time
+import re
 
 
 def get_raw_training_data(filename):
@@ -41,9 +42,15 @@ def get_raw_training_data(filename):
 
 def organize_raw_training_data(raw_training_data, stemmer):
     """
+    Takes in our list of dictionaries and uses NLTK to find all the word stems.
     @params:
         raw_training_data --> dictionary of names and sentences
         stemmer --> our Lancaster Stemmer object
+
+    @returns:
+        preprocessed_words --> list of unique word stems
+        classes --> list of unique actor names
+        documents --> list of tuples, where index 0 is the list of words in the sentence, and index 1 is the actor name
     """
     words = []
     classes = []
@@ -66,21 +73,30 @@ def organize_raw_training_data(raw_training_data, stemmer):
 
     #preprocess our tokens 
     preprocessed_words = preprocess_words(words, stemmer)
-
+    print("Words:\n{0} \n Classes:\n{1}\n Documents:\n{2}\n".format(preprocessed_words, classes, documents))
     return preprocessed_words, classes, documents
 
 
 def preprocess_words(words, stemmer):
-    """ Stems each word in the words list and returns a 
-    list of these word stems without duplicates."""
+    """
+    Stems each word in the words list and returns a 
+    list of these word stems without duplicates.
+    @params:
+        words --> list of words
+        stemmer --> our Lancaster Stemmer object
+
+    @returns:
+        preprocessed_words --> our list of unique words without repeats or punctuation
+    """
     word_stems = set()
     preprocessed_words = []
 
     #loop through the word tokens
     for word in words:
+        word = re.sub('[\.\?(),"!_\']', "", word)
         stemmed_word = stemmer.stem(word)
         # we don't want punctuation included
-        if stemmed_word != "?" or "!" or ".":
+        if stemmed_word != "?" or stemmed_word != "!" or stemmed_word != ".":
             word_stems.add(stemmed_word)
     
     #add our words without repeats to a list
@@ -114,13 +130,15 @@ def create_training_data(words, classes, documents, stemmer):
     output = []
     # loop through our sentences
     for line in documents:
-        name = line[0]
-        sentence = line[1]
+        name = line[1]
+        sentence = line[0]
         elements = []
         bag = []
-        for elem in sentence.split():
+        for elem in sentence:
+            elem = re.sub('[\.\?(),"!_\']', "", elem)
             stem = stemmer.stem(elem)
-            elements.append(stem)
+            if stem:
+                elements.append(stem)
         
         # we look through all our unique words; if a word in the sentence is in that list we put 1
         # at the corresponding index and 0 if not
@@ -166,7 +184,22 @@ def feedforward(X, synapse_0, synapse_1):
     return layer_0, layer_1, layer_2
     
 def get_synapses(epochs, X, y, alpha, synapse_0, synapse_1):
-    """Update our weights for each epoch."""
+    """
+    Update our weights for each epoch.
+    @params:
+        epochs --> number of iterations of training data we want to do
+        X --> array of training data, which is the list of bags, where each bag is a vector denoting whether or not each word in our vocabulary
+        appears in a sentence
+        y --> array of output data, which is the list of bags, where each bag is a vector denoting whether or not each actor in our classes
+        was the speaker of the sentence
+        alpha --> learning rate, ensures we aren't making changes that are too big
+        synapse_0 --> keeps track of the weights in each epoch, updated in every iteration
+        synapse_1 --> keeps track of the weights in each epoch
+
+    @returns:
+        synapse_0 --> trained synapse
+        synapse_1 --> trained synapse
+    """
     # Initializations.
     last_mean_error = 1
 
@@ -219,7 +252,6 @@ def get_synapses(epochs, X, y, alpha, synapse_0, synapse_1):
 
     return synapse_0, synapse_1
 
-
 def save_synapses(filename, words, classes, synapse_0, synapse_1):
     """Save our weights as a JSON file for later use."""
     now = datetime.datetime.now()
@@ -236,7 +268,9 @@ def save_synapses(filename, words, classes, synapse_0, synapse_1):
     print("Saved synapses to:", synapse_file)
 
 def init_synapses(X, hidden_neurons, classes):
-    """Initializes our synapses (using random values)."""
+    """
+    Initializes our synapses (using random values).
+    """
     # Ensures we have a "consistent" randomness for convenience.
     np.random.seed(1)
 
@@ -269,6 +303,56 @@ def start_training(words, classes, training_data, output):
     elapsed_time = time.time() - start_time
     print("Processing time:", elapsed_time, "seconds")
 
+"""* * * CLASSIFICATION OF SENTENCES * * *"""
+
+def bow(sentence, words):
+    """Return bag of words for a sentence."""
+    stemmer = LancasterStemmer()
+
+    # Break each sentence into tokens and stem each token.
+    sentence_words = [stemmer.stem(word.lower()) for word in nltk.word_tokenize(sentence)]
+
+    # Create the bag of words.
+    bag = [0]*len(words)
+    for s in sentence_words:
+        for i,w in enumerate(words):
+            if w == s:
+                bag[i] = 1
+    return (np.array(bag))
+
+
+def get_output_layer(words, sentence):
+    """Open our saved weights from training and use them to predict based on
+    our bag of words for the new sentence to classify."""
+
+    # Load calculated weights.
+    synapse_file = 'synapses.json'
+    with open(synapse_file) as data_file:
+        synapse = json.load(data_file)
+        synapse_0 = np.asarray(synapse['synapse0'])
+        synapse_1 = np.asarray(synapse['synapse1'])
+
+    # Retrieve our bag of words for the sentence.
+    x = bow(sentence.lower(), words)
+    # This is our input layer (which is simply our bag of words for the sentence).
+    l0 = x
+    # Perform matrix multiplication of input and hidden layer.
+    l1 = sigmoid(np.dot(l0, synapse_0))
+    # Create the output layer.
+    l2 = sigmoid(np.dot(l1, synapse_1))
+    return l2
+
+def classify(words, classes, sentence):
+    """Classifies a sentence by examining known words and classes and loading our calculated weights (synapse values)."""
+    error_threshold = 0.2
+    results = get_output_layer(words, sentence)
+    results = [[i,r] for i,r in enumerate(results) if r>error_threshold ]
+    results.sort(key=lambda x: x[1], reverse=True)
+    return_results =[[classes[r[0]],r[1]] for r in results]
+    print("\nSentence to classify: {0}\nClassification: {1}".format(sentence, return_results))
+    return return_results
+
+""" * * * MAIN METHOD * * *"""
 
 def main():
     #allows us to find the stem of any word to determine its basic meaning
@@ -278,7 +362,16 @@ def main():
     raw_training_data = get_raw_training_data('test.csv')
     words, classes, documents = organize_raw_training_data(raw_training_data, stemmer)
     training_data, output = create_training_data(words, classes, documents, stemmer)
+
+    #comment this out if we already have our synapses json and you want to re-use training data
     start_training(words, classes, training_data, output)
+
+    # Classify new sentences.
+    classify(words, classes, "will you look into the mirror?")
+    classify(words, classes, "mithril, as light as a feather, and as hard as dragon scales.")
+    classify(words, classes, "the thieves!")
+    classify(words, classes, "i like chocolate chip cookies")
+    classify(words, classes, "shall i compare thee to a summer's day")
 
 if __name__ == "__main__":
     main()  
