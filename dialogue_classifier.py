@@ -1,3 +1,27 @@
+"""
+Authors: Kim Hanckock, Kayla Snyder, Lydia Pitts
+CSCI 3725: Computational Creativity
+Party Quest 3: Social Networks
+Last Edited: Nov 19, 2020
+
+Description of Project:
+This program uses a simple neural network that takes in a csv file of play dialogue as its training data.
+The network is trained using nltk and is used to predict which actor in the play is most likely to say
+a given sentence. The file has three main components:
+    1) Generating our training data, which happens when we call get_raw_training_data() and organize_raw_training_data()
+       in our main method.
+    2) Training our model, which happens when we call start_training in the main method
+    3) Classifying sentences, which happens when we call classify() in the main method
+
+Potential Bugs:
+We are not totally sure about how the stemmer works, and if we are correctly preprocessing the stems in a way
+that is best for the model. Right now we are using regex to remove all punctuation, but in the future other 
+methods might yield better results.
+
+Sources Used:http://www.bowdoin.edu/~sharmon/static/3725/data/pq4_starter.py
+https://www.nltk.org/
+
+"""
 import nltk
 from nltk.stem.lancaster import LancasterStemmer
 import os
@@ -13,7 +37,6 @@ def get_raw_training_data(filename):
     """
     Read in our csv of training data, creating a list of dictionaries to keep track of each
     person and sentence 
-
     @params:
         filename --> name of the csv file we are reading in
     
@@ -46,7 +69,6 @@ def organize_raw_training_data(raw_training_data, stemmer):
     @params:
         raw_training_data --> dictionary of names and sentences
         stemmer --> our Lancaster Stemmer object
-
     @returns:
         preprocessed_words --> list of unique word stems
         classes --> list of unique actor names
@@ -84,7 +106,6 @@ def preprocess_words(words, stemmer):
     @params:
         words --> list of words
         stemmer --> our Lancaster Stemmer object
-
     @returns:
         preprocessed_words --> our list of unique words without repeats or punctuation
     """
@@ -110,13 +131,11 @@ def preprocess_words(words, stemmer):
 def create_training_data(words, classes, documents, stemmer):
     """
     Create our training data based on the unique words, names, and sentences in the document.
-
     @params:
         words --> unique tokens in the document
         classes --> list of actor names
         documents --> list of tuples including the sentence and actor name
         stemmer --> our Lancaster Stemmer object
-
     @returns:
         training_data --> list of lists, where each element is a list whose length is the number
         of unique words, and the number of elements is the number of sentences. At each index,
@@ -124,7 +143,6 @@ def create_training_data(words, classes, documents, stemmer):
         output --> list of lists, where each element is a list whose length is the number
         of unique names, and the number of elements is the total number of names. At each index,
         there is 0 if the name isn't mapped to the sentence and 1 if it is
-
     """
     training_data = []
     output = []
@@ -195,7 +213,6 @@ def get_synapses(epochs, X, y, alpha, synapse_0, synapse_1):
         alpha --> learning rate, ensures we aren't making changes that are too big
         synapse_0 --> keeps track of the weights in each epoch, updated in every iteration
         synapse_1 --> keeps track of the weights in each epoch
-
     @returns:
         synapse_0 --> trained synapse
         synapse_1 --> trained synapse
