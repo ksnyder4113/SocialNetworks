@@ -10,8 +10,13 @@ The network is trained using nltk and is used to predict which actor in the play
 a given sentence. The file has three main components:
     1) Generating our training data, which happens when we call get_raw_training_data() and organize_raw_training_data()
        in our main method.
-    2) Training our model, which happens when we call 
+    2) Training our model, which happens when we call start_training in the main method
+    3) Classifying sentences, which happens when we call classify() in the main method
+
 Potential Bugs:
+We are not totally sure about how the stemmer works, and if we are correctly preprocessing the stems in a way
+that is best for the model. Right now we are using regex to remove all punctuation, but in the future other 
+methods might yield better results.
 
 Sources Used:http://www.bowdoin.edu/~sharmon/static/3725/data/pq4_starter.py
 https://www.nltk.org/
